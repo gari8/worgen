@@ -1,0 +1,30 @@
+package main
+
+import (
+	"@@.Package@@/config"
+	"@@.Package@@/infrastructure/driver"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"log"
+	"net/http"
+)
+
+func main() {
+	cfg := config.Load()
+	rdb := driver.NewRedisClient(cfg.Redis.Url)
+
+	// TODO: If you use Minio, please uncomment out
+	// awsConfig := driver.NewAwsConfig()
+	// blobStore := driver.NewBlobStore(awsConfig, driver.BucketName)
+
+	// Setup webserver
+	app := gin.Default()
+	app.GET("/", func(ctx *gin.Context) {
+		ctx.JSON(http.StatusOK, gin.H{"message": "OK!"})
+	})
+	api := app.Group("/api/v1")
+	api.POST("/publish", func(ctx *gin.Context) {
+		rdb.Publish(ctx, driver.JobQueueKey, "payload")
+	})
+	log.Fatal(app.Run(fmt.Sprintf(":%d", cfg.App.Port)))
+}

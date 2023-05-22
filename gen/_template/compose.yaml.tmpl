@@ -1,0 +1,65 @@
+version: "3.8"
+services:
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis:6379"
+      TZ: Asia/Tokyo
+  redis:
+    image: redis:alpine
+    container_name: redis
+    command: [ "redis-server", "/usl/local/etc/redis/redis.conf" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping", "|", "grep", "PONG" ]
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./data/redis/redis.conf:/usl/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+@@ $useMinio := false @@
+@@ range .Middleware @@
+  @@ if eq . "minio" @@
+    @@ $useMinio = true @@
+  @@ end @@
+@@ end @@
+@@ if $useMinio @@
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: minio
+    environment:
+      MINIO_ROOT_USER: root
+      MINIO_ROOT_PASSWORD: password
+    command: server --console-address ":9001" /data/minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+@@ end @@
+  worker_a:
+    container_name: worker_a
+    ports:
+      - "5001:5001"
+    build:
+      context: .
+      dockerfile: docker/worker/Dockerfile
+    volumes:
+      - .:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis:6379"
+      TZ: Asia/Tokyo
+    
+  

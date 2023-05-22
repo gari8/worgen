@@ -1,0 +1,18 @@
+package main
+
+import (
+	"@@.Package@@/config"
+	"@@.Package@@/infrastructure/driver"
+	"golang.org/x/net/context"
+	"log"
+)
+
+func main() {
+	cfg := config.Load()
+	rdb := driver.NewRedisClient(cfg.Redis.Url)
+	serv := newServer(rdb)
+	serv.Run(func(ctx context.Context, payload string) error {
+		log.Printf("payload: %s\n", payload)
+		return nil
+	})
+}
